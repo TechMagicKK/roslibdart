@@ -130,9 +130,18 @@ class Ros {
   /// Close the connection to the ROS node, an exit [code] and [reason] can
   /// be optionally specified.
   Future<void> close([int? code, String? reason]) async {
-    /// Close listener and websocket.
-    await _channelListener.cancel();
-    await _channel.sink.close(code, reason);
+    /// Close listener and websocket if they exist.
+    try {
+      await _channelListener.cancel();
+    } catch (e) {
+      // _channelListener may not be initialized if connection failed early
+    }
+    
+    try {
+      await _channel.sink.close(code, reason);
+    } catch (e) {
+      // _channel may not be initialized if connection failed early
+    }
 
     /// Update the connection status.
     _changeStatus(Status.closed);
