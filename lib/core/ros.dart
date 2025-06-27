@@ -32,12 +32,16 @@ enum TopicStatus {
 class Ros {
   /// Initializes the [_statusController] as a broadcast.
   /// The [url] of the ROS node can be optionally specified at this point.
-  Ros({this.url}) {
+  /// The [connectionTimeout] specifies how long to wait for connection (defaults to 15 seconds).
+  Ros({this.url, this.connectionTimeout = const Duration(seconds: 15)}) {
     _statusController = StreamController<(Status status, String? reason)>.broadcast();
   }
 
   /// The url of ROS node running the rosbridge server.
   dynamic url;
+
+  /// Connection timeout duration for WebSocket connections.
+  final Duration connectionTimeout;
 
   /// Total subscribers to ever connect.
   int subscribers = 0;
@@ -85,7 +89,7 @@ class Ros {
     _changeStatus(Status.connecting);
 
     final httpClient = HttpClient();
-    httpClient.connectionTimeout = const Duration(seconds: 15);
+    httpClient.connectionTimeout = connectionTimeout;
     await runZonedGuarded<Future<void>>(() async {
       WebSocket.connect(
         url,
