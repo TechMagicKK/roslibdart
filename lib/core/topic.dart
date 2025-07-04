@@ -178,7 +178,10 @@ class Topic {
   /// Wait for the connection to close and then reset advertising variables.
   Future<void> watchForClose() async {
     if (!reconnectOnClose) {
-      await ros.statusStream.firstWhere((s) => s.$1 == Status.closed);
+      await ros.statusStream.firstWhere((s) {
+        final (status, _) = s;
+        return status == Status.closed;
+      });
       advertiseId = null;
     }
   }
@@ -202,7 +205,10 @@ class Topic {
     // is set, wait for ROS to reconnect and then resend the [message].
     ros.send(message);
     if (reconnectOnClose && ros.status != Status.connected) {
-      await ros.statusStream.firstWhere((s) => s.$1 == Status.connected);
+      await ros.statusStream.firstWhere((s) {
+        final (status, _) = s;
+        return status == Status.connected;
+      });
       ros.send(message);
     }
   }
