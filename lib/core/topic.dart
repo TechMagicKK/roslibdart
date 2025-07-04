@@ -28,6 +28,9 @@ class Topic {
   /// Stream subscribers to the topic can listen to.
   Stream<Map<String, dynamic>>? subscription;
 
+  /// Stream subscription for cleanup
+  StreamSubscription<Map<String, dynamic>>? _streamSubscription;
+
   /// Name of the topic.
   String name;
 
@@ -110,7 +113,7 @@ class Topic {
         throttleRate: throttleRate,
         queueLength: queueLength,
       ));
-      subscription!.listen((Map<String, dynamic> message) async {
+      _streamSubscription = subscription!.listen((Map<String, dynamic> message) async {
         if (message['topic'] != name) {
           return;
         }
@@ -122,6 +125,12 @@ class Topic {
   /// Unsubscribe from the topic.
   Future<void> unsubscribe() async {
     if (subscribeId != null) {
+      // Cancel the stream subscription first
+      if (_streamSubscription != null) {
+        await _streamSubscription!.cancel();
+        _streamSubscription = null;
+      }
+      
       // Send the request and reset the subscription variables.
       await safeSend(Request(
         op: 'unsubscribe',
@@ -169,7 +178,7 @@ class Topic {
   /// Wait for the connection to close and then reset advertising variables.
   Future<void> watchForClose() async {
     if (!reconnectOnClose) {
-      await ros.statusStream.firstWhere((s) => s == Status.closed);
+      await ros.statusStream.firstWhere((s) => s.$1 == Status.closed);
       advertiseId = null;
     }
   }
@@ -193,7 +202,7 @@ class Topic {
     // is set, wait for ROS to reconnect and then resend the [message].
     ros.send(message);
     if (reconnectOnClose && ros.status != Status.connected) {
-      await ros.statusStream.firstWhere((s) => s == Status.connected);
+      await ros.statusStream.firstWhere((s) => s.$1 == Status.connected);
       ros.send(message);
     }
   }
